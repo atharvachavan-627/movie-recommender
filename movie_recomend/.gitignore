@@ -18,6 +18,9 @@ frontend/dist/
 .npm
 *.log
 
+# Large MovieLens dataset files are downloaded separately
+data/ratings.csv
+
 # OS / IDE
 .DS_Store
 Thumbs.db
