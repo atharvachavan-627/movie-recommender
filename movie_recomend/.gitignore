@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+backend/venv/
+backend/app/__pycache__/
+backend/app/recommender/__pycache__/
+
+# Node
+node_modules/
+frontend/node_modules/
+frontend/dist/
+.npm
+*.log
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
