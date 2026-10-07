@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
-import { Film, Users, Star, Database, BarChart2, TrendingUp, Trophy } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Film, Users, Star, Database, BarChart2, TrendingUp, Trophy, Brain, ArrowRight } from "lucide-react";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, AreaChart, Area, CartesianGrid, Cell } from "recharts";
-import { fetchAnalyticsOverview, fetchPopularMovies, fetchGenreAnalytics, fetchRatingAnalytics } from "../services/api";
+import { fetchAnalyticsOverview, fetchPopularMovies, fetchGenreAnalytics, fetchRatingAnalytics, fetchMLValidation } from "../services/api";
 
 const COLORS = ["#4F46E5", "#0E7C86", "#6D4AFF", "#E5383B", "#F59E0B", "#0EA5E9", "#10B981", "#EC4899", "#8B5CF6", "#14B8A6", "#F97316", "#64748B"];
 const AXIS = { stroke: "#7B8099", fontSize: 12 };
@@ -30,12 +31,25 @@ export default function Analytics() {
   const [popular, setPopular] = useState([]);
   const [genres, setGenres] = useState([]);
   const [ratings, setRatings] = useState([]);
+  const [mlVal, setMlVal] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
   useEffect(() => {
-    Promise.all([fetchAnalyticsOverview(), fetchPopularMovies(10), fetchGenreAnalytics(), fetchRatingAnalytics()])
-      .then(([o, p, g, r]) => { setOverview(o); setPopular(p); setGenres(g); setRatings(r); })
+    Promise.all([
+      fetchAnalyticsOverview(),
+      fetchPopularMovies(10),
+      fetchGenreAnalytics(),
+      fetchRatingAnalytics(),
+      fetchMLValidation().catch(() => null)
+    ])
+      .then(([o, p, g, r, mv]) => {
+        setOverview(o);
+        setPopular(p);
+        setGenres(g);
+        setRatings(r);
+        setMlVal(mv);
+      })
       .catch((e) => { console.error("Failed to load analytics:", e); setError(true); })
       .finally(() => setLoading(false));
   }, []);
@@ -118,6 +132,42 @@ export default function Analytics() {
               </div>
             )}
           </Panel>
+
+          {mlVal && (
+            <Panel icon={Brain} title="Dataset Validation & ML Metrics">
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px", marginTop: "8px" }}>
+                <div className="card" style={{ padding: "12px" }}>
+                  <div className="muted" style={{ fontSize: "0.8rem" }}>Dataset</div>
+                  <strong>{mlVal.dataset_name}</strong>
+                </div>
+                <div className="card" style={{ padding: "12px" }}>
+                  <div className="muted" style={{ fontSize: "0.8rem" }}>Training Samples</div>
+                  <strong>{mlVal.train_samples?.toLocaleString()}</strong>
+                </div>
+                <div className="card" style={{ padding: "12px" }}>
+                  <div className="muted" style={{ fontSize: "0.8rem" }}>Test Samples</div>
+                  <strong>{mlVal.test_samples?.toLocaleString()}</strong>
+                </div>
+                <div className="card" style={{ padding: "12px" }}>
+                  <div className="muted" style={{ fontSize: "0.8rem" }}>Rating Scale</div>
+                  <strong>{mlVal.rating_min} – {mlVal.rating_max} ★</strong>
+                </div>
+                <div className="card" style={{ padding: "12px" }}>
+                  <div className="muted" style={{ fontSize: "0.8rem" }}>K-Means Clusters</div>
+                  <strong>K = {mlVal.selected_k}</strong>
+                </div>
+                <div className="card" style={{ padding: "12px" }}>
+                  <div className="muted" style={{ fontSize: "0.8rem" }}>Silhouette Score</div>
+                  <strong>{mlVal.silhouette_score}</strong>
+                </div>
+              </div>
+              <div style={{ marginTop: "16px", textAlign: "right" }}>
+                <Link to="/ml-insights" className="btn btn--primary">
+                  View Full ML Benchmark & PCA Clusters <ArrowRight size={16} />
+                </Link>
+              </div>
+            </Panel>
+          )}
         </>
       )}
     </div>

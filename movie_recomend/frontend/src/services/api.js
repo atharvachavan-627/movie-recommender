@@ -84,3 +84,51 @@ export async function fetchGenreAnalytics() {
 export async function fetchRatingAnalytics() {
   return request(`${API_BASE_URL}/analytics/ratings`);
 }
+
+// --- Machine Learning & Clustering API ---
+
+export async function fetchMLValidation() {
+  return request(`${API_BASE_URL}/ml/validation`);
+}
+
+export async function fetchMLEvaluation() {
+  return request(`${API_BASE_URL}/ml/evaluation`);
+}
+
+export async function fetchMLFeatureImportance() {
+  return request(`${API_BASE_URL}/ml/feature-importance`);
+}
+
+export async function fetchMLClusters() {
+  return request(`${API_BASE_URL}/ml/clusters`);
+}
+
+export async function fetchMLDemoUsers() {
+  return request(`${API_BASE_URL}/ml/demo-users`);
+}
+
+export async function fetchMLUserProfile() {
+  return request(`${API_BASE_URL}/ml/user-profile`);
+}
+
+export async function linkMovieLensUser(movielens_user_id) {
+  return request(`${API_BASE_URL}/ml/link-movielens-user`, {
+    method: "POST",
+    body: JSON.stringify({ movielens_user_id })
+  });
+}
+
+export async function rateMovie(movie_id, rating) {
+  return request(`${API_BASE_URL}/ml/rate-movie`, {
+    method: "POST",
+    body: JSON.stringify({ movie_id, rating })
+  });
+}
+
+export async function predictRating(movie_id, model = "random_forest", movielens_user_id = null) {
+  return request(`${API_BASE_URL}/ml/predict-rating`, {
+    method: "POST",
+    body: JSON.stringify({ movie_id, model, movielens_user_id })
+  });
+}
+

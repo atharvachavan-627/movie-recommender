@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import scipy.sparse as sp
 import logging
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from sklearn.preprocessing import normalize
 from app.config import MIN_MOVIE_RATINGS_FOR_COLLAB, MAX_USERS_FOR_COLLAB
 
@@ -25,9 +25,12 @@ class CollaborativeRecommender:
         
         # 1. Filter to movies with sufficient ratings for reliable similarity calculation
         movie_counts = ratings_df['movieId'].value_counts()
-        eligible_movies = set(movie_counts[movie_counts >= MIN_MOVIE_RATINGS_FOR_COLLAB].index)
+        threshold = MIN_MOVIE_RATINGS_FOR_COLLAB
+        if not movie_counts.empty and movie_counts.max() < threshold:
+            threshold = max(5, int(movie_counts.quantile(0.80)))
+        eligible_movies = set(movie_counts[movie_counts >= threshold].index)
         
-        logger.info(f"Filtering dataset: {len(eligible_movies)} movies have >= {MIN_MOVIE_RATINGS_FOR_COLLAB} ratings.")
+        logger.info(f"Filtering dataset: {len(eligible_movies)} movies have >= {threshold} ratings.")
         filtered_ratings = ratings_df[ratings_df['movieId'].isin(eligible_movies)].copy()
         
         # Sample top active users if dataset is massive to maintain instant startup

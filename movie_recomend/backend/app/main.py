@@ -4,14 +4,17 @@ from typing import Optional, List, Dict, Any
 from contextlib import asynccontextmanager
 import logging
 
+from pydantic import BaseModel, Field
+
 from app.auth import LoginRequest, TokenResponse, UserCreate, UserResponse, get_current_user, login_user, register_user
 from app.config import CONTENT_WEIGHT, COLLABORATIVE_WEIGHT, FRONTEND_ORIGINS
-from app.database import initialize_database
+from app.database import get_connection, initialize_database
 from app.data_loader import data_loader
 from app.recommender.content_based import ContentBasedRecommender
 from app.recommender.collaborative import CollaborativeRecommender
 from app.recommender.hybrid import HybridRecommender
 from app.analytics import analytics_engine
+from app.ml.engine import ml_engine
 
 logger = logging.getLogger("MovieMind.Main")
 
@@ -19,6 +22,18 @@ logger = logging.getLogger("MovieMind.Main")
 content_recommender = ContentBasedRecommender()
 collaborative_recommender = CollaborativeRecommender()
 hybrid_recommender = HybridRecommender(content_recommender, collaborative_recommender)
+
+class PredictRequest(BaseModel):
+    movie_id: int
+    model: Optional[str] = "random_forest"
+    movielens_user_id: Optional[int] = None
+
+class RateMovieRequest(BaseModel):
+    movie_id: int
+    rating: float = Field(..., ge=0.5, le=5.0)
+
+class LinkMovieLensUserRequest(BaseModel):
+    movielens_user_id: int
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -33,6 +48,9 @@ async def lifespan(app: FastAPI):
     
     # 3. Compute Analytics
     analytics_engine.compute_analytics()
+    
+    # 4. Load Real ML Models and Metadata
+    ml_engine.load_models()
     
     logger.info("MovieMind Backend Engine Startup Complete!")
     yield
@@ -225,6 +243,19 @@ def get_hybrid_recommendations(
         collab_w=cbw
     )
     
+    # Enrich with dynamically calculated ML prediction for the user
+    for r in recs:
+        try:
+            pred_res = ml_engine.predict_rating(movie_id=r["movieId"], app_user_id=current_user.id)
+            if pred_res.get("status") == "success":
+                r["predicted_rating"] = pred_res.get("predicted_rating")
+                r["ml_model"] = pred_res.get("model")
+            else:
+                r["predicted_rating"] = None
+                r["ml_status"] = pred_res.get("status")
+        except Exception:
+            r["predicted_rating"] = None
+    
     return {
         "movie": movie,
         "type": "hybrid",
@@ -252,3 +283,85 @@ def get_analytics_genres(current_user: UserResponse = Depends(get_current_user))
 @app.get("/api/analytics/ratings")
 def get_analytics_ratings(current_user: UserResponse = Depends(get_current_user)):
     return analytics_engine.get_ratings_distribution()
+
+# --- Real Machine Learning Endpoints ---
+
+@app.get("/api/ml/validation")
+def get_ml_validation(current_user: UserResponse = Depends(get_current_user)):
+    """Returns dataset summary statistics and validation parameters."""
+    return ml_engine.get_validation_stats()
+
+@app.get("/api/ml/evaluation")
+def get_ml_evaluation(current_user: UserResponse = Depends(get_current_user)):
+    """Returns evaluation metrics (MAE, MSE, RMSE, R2) calculated on the held-out test set."""
+    return ml_engine.get_model_evaluation()
+
+@app.get("/api/ml/feature-importance")
+def get_ml_feature_importance(current_user: UserResponse = Depends(get_current_user)):
+    """Returns feature importances computed by the Random Forest model."""
+    return ml_engine.get_feature_importance()
+
+@app.get("/api/ml/clusters")
+def get_ml_clusters(current_user: UserResponse = Depends(get_current_user)):
+    """Returns K-Means cluster profiles, inertia/silhouette curves, and 2D PCA points."""
+    return ml_engine.get_clustering_data()
+
+@app.get("/api/ml/demo-users")
+def get_ml_demo_users(current_user: UserResponse = Depends(get_current_user)):
+    """Returns real MovieLens user profiles available for academic demonstration."""
+    return ml_engine.get_demo_movielens_users()
+
+@app.get("/api/ml/user-profile")
+def get_ml_user_profile(current_user: UserResponse = Depends(get_current_user)):
+    """Returns current user's rating history and MovieLens link status."""
+    history = ml_engine.get_app_user_history(current_user.id)
+    enriched_ratings = []
+    for r in history["custom_ratings"]:
+        m = data_loader.get_movie(r["movie_id"])
+        enriched_ratings.append({
+            **r,
+            "title": m["title"] if m else f"Movie {r['movie_id']}",
+            "genres": m["genres"] if m else ""
+        })
+    return {
+        "app_user_id": current_user.id,
+        "username": current_user.username,
+        "linked_movielens_user_id": history["linked_movielens_user_id"],
+        "custom_ratings_count": history["custom_ratings_count"],
+        "custom_ratings": enriched_ratings
+    }
+
+@app.post("/api/ml/link-movielens-user")
+def link_movielens_user(payload: LinkMovieLensUserRequest, current_user: UserResponse = Depends(get_current_user)):
+    """Links the current MovieMind account to a real MovieLens user profile."""
+    with get_connection() as conn:
+        conn.execute(
+            "INSERT OR REPLACE INTO user_movielens_mapping (user_id, movielens_user_id) VALUES (?, ?)",
+            (current_user.id, payload.movielens_user_id)
+        )
+    return {"status": "success", "linked_movielens_user_id": payload.movielens_user_id}
+
+@app.post("/api/ml/rate-movie")
+def rate_movie(payload: RateMovieRequest, current_user: UserResponse = Depends(get_current_user)):
+    """Saves a real rating from the user into SQLite to solve cold start."""
+    movie = data_loader.get_movie(payload.movie_id)
+    if not movie:
+        raise HTTPException(status_code=404, detail="Movie not found in MovieLens dataset")
+    with get_connection() as conn:
+        conn.execute(
+            "INSERT OR REPLACE INTO user_ratings (user_id, movie_id, rating) VALUES (?, ?, ?)",
+            (current_user.id, payload.movie_id, payload.rating)
+        )
+    return {"status": "success", "movie_id": payload.movie_id, "rating": payload.rating, "title": movie["title"]}
+
+@app.post("/api/ml/predict-rating")
+def predict_rating_endpoint(payload: PredictRequest, current_user: UserResponse = Depends(get_current_user)):
+    """Generates real rating prediction for target movie using user history and trained model."""
+    result = ml_engine.predict_rating(
+        movie_id=payload.movie_id,
+        model_name=payload.model or "random_forest",
+        app_user_id=current_user.id,
+        movielens_user_id=payload.movielens_user_id
+    )
+    return result
+

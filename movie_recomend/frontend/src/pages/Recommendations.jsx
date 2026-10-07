@@ -189,6 +189,14 @@ export default function Recommendations() {
                 <ScoreBar label="Hybrid" value={r.hybrid_score} tone="hybrid" strong />
                 <ScoreBar label="Content" value={r.content_score} tone="content" />
                 <ScoreBar label="Collaborative" value={r.collaborative_score} tone="collab" />
+                {r.predicted_rating !== null && r.predicted_rating !== undefined && (
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.82rem", fontWeight: "600", marginTop: "6px", paddingTop: "4px", borderTop: "1px dashed var(--line)" }}>
+                    <span className="muted">ML Predicted Rating:</span>
+                    <span style={{ color: "var(--brand)", display: "flex", alignItems: "center", gap: "2px" }}>
+                      <Star size={12} fill="currentColor" /> {r.predicted_rating} / 5
+                    </span>
+                  </div>
+                )}
               </div>
 
               {r.explanation && <p className="rec__why"><strong>Why recommended:</strong> {r.explanation}</p>}

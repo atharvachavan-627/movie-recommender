@@ -19,7 +19,9 @@ class AnalyticsEngine:
         ratings_df = data_loader.ratings_df
 
         # 1. Popular Movies (Top 20 by rating count & high avg rating)
-        popular_df = movies_df[movies_df['rating_count'] >= 100].sort_values(
+        has_100 = (movies_df['rating_count'] >= 100).any()
+        filter_mask = movies_df['rating_count'] >= 100 if has_100 else movies_df['rating_count'] > 0
+        popular_df = movies_df[filter_mask].sort_values(
             by=['rating_count', 'avg_rating'], ascending=[False, False]
         ).head(20)
 
