@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { ArrowLeft, Cpu, Info, RefreshCw, Star, SlidersHorizontal } from "lucide-react";
 import SearchBox from "../components/SearchBox";
 import ScoreBar from "../components/ScoreBar";
@@ -44,6 +44,8 @@ function Picker({ onSelect }) {
 
 export default function Recommendations() {
   const { movieId } = useParams();
+  const [searchParams] = useSearchParams();
+  const targetId = movieId || searchParams.get("movie_id");
   const navigate = useNavigate();
   const open = (m) => navigate(`/recommend/${m.movieId}`);
 
@@ -59,15 +61,15 @@ export default function Recommendations() {
 
   // Load the selected movie from the URL
   useEffect(() => {
-    if (!movieId) { setMovie(null); return; }
+    if (!targetId) { setMovie(null); return; }
     let stale = false;
     setMovie(null);
     setMovieError(null);
-    fetchMovieDetails(movieId)
+    fetchMovieDetails(targetId)
       .then((m) => !stale && setMovie(m))
       .catch(() => !stale && setMovieError("We could not find that movie. Search for another title."));
     return () => { stale = true; };
-  }, [movieId]);
+  }, [targetId]);
 
   // Load recommendations (weights are debounced so the slider stays smooth)
   useEffect(() => {
@@ -199,11 +201,20 @@ export default function Recommendations() {
                 )}
               </div>
 
-              {r.explanation && <p className="rec__why"><strong>Why recommended:</strong> {r.explanation}</p>}
+              {r.explanation && (
+                <div style={{ margin: "0.75rem 0", padding: "0.6rem 0.8rem", background: "var(--bg)", borderRadius: "var(--radius-sm)", fontSize: "0.82rem" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "5px", color: "var(--brand)", fontWeight: "600", marginBottom: "3px" }}>
+                    <Info size={13} /> <span>Why recommended:</span>
+                  </div>
+                  <p style={{ margin: 0, color: "var(--text-muted)", lineHeight: 1.35 }}>{r.explanation}</p>
+                </div>
+              )}
 
-              <button className="btn btn--secondary btn--block" onClick={() => open(r)}>
-                <RefreshCw size={15} /> Recommend similar
-              </button>
+              <div style={{ display: "flex", gap: "8px", marginTop: "auto" }}>
+                <button className="btn btn--secondary btn--block" onClick={() => open(r)}>
+                  <RefreshCw size={14} /> Similar
+                </button>
+              </div>
             </article>
           ))}
         </div>
@@ -211,3 +222,4 @@ export default function Recommendations() {
     </div>
   );
 }
+

@@ -6,9 +6,11 @@ import Logo from "./Logo";
 const LINKS = [
   { to: "/", label: "Home", end: true },
   { to: "/explore", label: "Explore" },
-  { to: "/ml-insights", label: "ML & Clusters" },
+  { to: "/warehouse", label: "Warehouse & ETL" },
+  { to: "/olap", label: "OLAP Cube" },
+  { to: "/ml-insights", label: "ML & Mining" },
   { to: "/analytics", label: "Analytics" },
-  { to: "/how-it-works", label: "How it works" },
+  { to: "/how-it-works", label: "How It Works" },
 ];
 
 const STATUS_LABEL = { online: "API online", offline: "API offline", checking: "Connecting" };

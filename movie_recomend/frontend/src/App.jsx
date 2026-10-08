@@ -7,7 +7,10 @@ import Home from "./pages/Home";
 import Explore from "./pages/Explore";
 import Recommendations from "./pages/Recommendations";
 const Analytics = lazy(() => import("./pages/Analytics"));
+const OLAPAnalytics = lazy(() => import("./pages/OLAPAnalytics"));
 const MLInsights = lazy(() => import("./pages/MLInsights"));
+const WarehouseETL = lazy(() => import("./pages/WarehouseETL"));
+const VivaMode = lazy(() => import("./pages/VivaMode"));
 import HowItWorks from "./pages/HowItWorks";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -54,9 +57,14 @@ export default function App() {
           <Route path="/explore" element={<ProtectedRoute><Explore /></ProtectedRoute>} />
           <Route path="/recommend" element={<ProtectedRoute><Recommendations /></ProtectedRoute>} />
           <Route path="/recommend/:movieId" element={<ProtectedRoute><Recommendations /></ProtectedRoute>} />
+          <Route path="/recommendations" element={<ProtectedRoute><Recommendations /></ProtectedRoute>} />
+          <Route path="/recommendations/:movieId" element={<ProtectedRoute><Recommendations /></ProtectedRoute>} />
+          <Route path="/warehouse" element={<ProtectedRoute><Suspense fallback={<div className="container page"><div className="skeleton skeleton--hero" /></div>}><WarehouseETL /></Suspense></ProtectedRoute>} />
+          <Route path="/olap" element={<ProtectedRoute><Suspense fallback={<div className="container page"><div className="skeleton skeleton--hero" /></div>}><OLAPAnalytics /></Suspense></ProtectedRoute>} />
           <Route path="/ml-insights" element={<ProtectedRoute><Suspense fallback={<div className="container page"><div className="skeleton skeleton--hero" /></div>}><MLInsights /></Suspense></ProtectedRoute>} />
           <Route path="/analytics" element={<ProtectedRoute><Suspense fallback={<div className="container page"><div className="skeleton skeleton--hero" /></div>}><Analytics /></Suspense></ProtectedRoute>} />
-          <Route path="/how-it-works" element={<ProtectedRoute><HowItWorks /></ProtectedRoute>} />
+          <Route path="/viva" element={<ProtectedRoute><Suspense fallback={<div className="container page"><div className="skeleton skeleton--hero" /></div>}><VivaMode /></Suspense></ProtectedRoute>} />
+          <Route path="/how-it-works" element={<ProtectedRoute><Suspense fallback={<div className="container page"><div className="skeleton skeleton--hero" /></div>}><VivaMode /></Suspense></ProtectedRoute>} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </main>

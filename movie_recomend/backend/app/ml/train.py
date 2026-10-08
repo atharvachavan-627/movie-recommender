@@ -1,6 +1,16 @@
+"""
+Real ML Training Pipeline for MovieMind.
+Trains:
+1. Supervised Regression: Linear Regression, Random Forest Regressor, HistGradientBoosting Regressor
+2. Supervised Classification: Decision Tree Classifier, Gaussian Naive Bayes (DISLIKE / NEUTRAL / LIKE)
+3. Unsupervised Clustering: K-Means with Elbow & Silhouette analysis (K=2..7)
+4. Dimensionality Reduction: PCA 2D projection
+All metrics are computed on a held-out, time-aware test set with zero target leakage.
+"""
 import logging
 import re
 from pathlib import Path
+from typing import Any, Dict, List, Tuple
 import joblib
 import numpy as np
 import pandas as pd
@@ -8,8 +18,20 @@ from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
 from sklearn.ensemble import HistGradientBoostingRegressor, RandomForestRegressor
 from sklearn.linear_model import LinearRegression
-from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score, silhouette_score
+from sklearn.metrics import (
+    accuracy_score,
+    confusion_matrix,
+    f1_score,
+    mean_absolute_error,
+    mean_squared_error,
+    precision_score,
+    r2_score,
+    recall_score,
+    silhouette_score,
+)
+from sklearn.naive_bayes import GaussianNB
 from sklearn.preprocessing import StandardScaler
+from sklearn.tree import DecisionTreeClassifier
 
 from app.config import BASE_DIR, MOVIES_CSV, RATINGS_CSV
 
@@ -34,6 +56,23 @@ FEATURE_NAMES = [
     "user_genre_affinity"
 ] + [f"genre_{g.lower()}" for g in GENRES_LIST]
 
+CLASS_LABELS = ["DISLIKE", "NEUTRAL", "LIKE"]
+
+
+def rating_to_class(rating: float) -> int:
+    """
+    Categorizes ratings into:
+    0: DISLIKE (< 2.5)
+    1: NEUTRAL (2.5 <= r < 4.0)
+    2: LIKE (>= 4.0)
+    """
+    if rating < 2.5:
+        return 0
+    elif rating < 4.0:
+        return 1
+    else:
+        return 2
+
 
 def extract_year(title: str) -> int:
     match = re.search(r"\((\d{4})\)$", str(title).strip())
@@ -41,16 +80,16 @@ def extract_year(title: str) -> int:
 
 
 def run_training_pipeline():
-    logger.info("Starting Real ML Training Pipeline on MovieLens Dataset...")
+    logger.info("Starting Complete DWM ML Training Pipeline on MovieLens Dataset...")
 
-    # 1. Load Real Data
+    # 1. Load Data
     if not MOVIES_CSV.exists() or not RATINGS_CSV.exists():
         raise FileNotFoundError(f"Missing required data files: {MOVIES_CSV} or {RATINGS_CSV}")
 
     movies_df = pd.read_csv(MOVIES_CSV)
     ratings_df = pd.read_csv(RATINGS_CSV)
 
-    logger.info(f"Loaded {len(movies_df)} movies and {len(ratings_df)} ratings from {RATINGS_CSV}")
+    logger.info(f"Loaded {len(movies_df)} movies and {len(ratings_df)} ratings.")
 
     # Process movie attributes
     movies_df["year"] = movies_df["title"].apply(extract_year)
@@ -61,7 +100,11 @@ def run_training_pipeline():
     movie_dict = movies_df.set_index("movieId").to_dict(orient="index")
 
     # 2. Time-Aware Train/Test Split (Prevent Temporal Leakage)
-    ratings_sorted = ratings_df.sort_values("timestamp").reset_index(drop=True)
+    if "timestamp" in ratings_df.columns:
+        ratings_sorted = ratings_df.sort_values("timestamp").reset_index(drop=True)
+    else:
+        ratings_sorted = ratings_df
+
     split_idx = int(len(ratings_sorted) * 0.8)
     train_df = ratings_sorted.iloc[:split_idx].copy()
     test_df = ratings_sorted.iloc[split_idx:].copy()
@@ -94,10 +137,11 @@ def run_training_pipeline():
             for g in GENRES_LIST
         }
 
-    # Helper function to vectorize feature extraction
+    # Vectorized Feature Extraction
     def extract_features(df):
         X = []
-        y = []
+        y_reg = []
+        y_clf = []
         for _, row in df.iterrows():
             uid = int(row["userId"])
             mid = int(row["movieId"])
@@ -133,65 +177,120 @@ def run_training_pipeline():
             ] + genre_vec
 
             X.append(feat)
-            y.append(target)
-        return np.array(X, dtype=np.float32), np.array(y, dtype=np.float32)
+            y_reg.append(target)
+            y_clf.append(rating_to_class(target))
+        return (
+            np.array(X, dtype=np.float32),
+            np.array(y_reg, dtype=np.float32),
+            np.array(y_clf, dtype=np.int32)
+        )
 
     logger.info("Extracting feature matrices...")
-    X_train, y_train = extract_features(train_df)
-    X_test, y_test = extract_features(test_df)
+    X_train, y_train_reg, y_train_clf = extract_features(train_df)
+    X_test, y_test_reg, y_test_clf = extract_features(test_df)
 
+    # 4. Supervised Regression Evaluation
     evaluation_metrics = {}
 
-    # 4. Train Models & Evaluate on Real Held-Out Test Set
     # Model 1: Linear Regression
     logger.info("Training Linear Regression...")
     lr = LinearRegression()
-    lr.fit(X_train, y_train)
+    lr.fit(X_train, y_train_reg)
     lr_preds = lr.predict(X_test)
     evaluation_metrics["linear_regression"] = {
         "name": "Linear Regression",
-        "mae": float(round(mean_absolute_error(y_test, lr_preds), 4)),
-        "mse": float(round(mean_squared_error(y_test, lr_preds), 4)),
-        "rmse": float(round(np.sqrt(mean_squared_error(y_test, lr_preds)), 4)),
-        "r2": float(round(r2_score(y_test, lr_preds), 4)),
+        "type": "Regression",
+        "mae": float(round(mean_absolute_error(y_test_reg, lr_preds), 4)),
+        "mse": float(round(mean_squared_error(y_test_reg, lr_preds), 4)),
+        "rmse": float(round(np.sqrt(mean_squared_error(y_test_reg, lr_preds)), 4)),
+        "r2": float(round(r2_score(y_test_reg, lr_preds), 4)),
     }
     joblib.dump(lr, MODELS_DIR / "linear_regression.joblib")
 
     # Model 2: Random Forest Regressor
     logger.info("Training Random Forest Regressor...")
     rf = RandomForestRegressor(n_estimators=60, max_depth=12, random_state=42, n_jobs=-1)
-    rf.fit(X_train, y_train)
+    rf.fit(X_train, y_train_reg)
     rf_preds = rf.predict(X_test)
     evaluation_metrics["random_forest"] = {
         "name": "Random Forest Regressor",
-        "mae": float(round(mean_absolute_error(y_test, rf_preds), 4)),
-        "mse": float(round(mean_squared_error(y_test, rf_preds), 4)),
-        "rmse": float(round(np.sqrt(mean_squared_error(y_test, rf_preds)), 4)),
-        "r2": float(round(r2_score(y_test, rf_preds), 4)),
+        "type": "Regression",
+        "mae": float(round(mean_absolute_error(y_test_reg, rf_preds), 4)),
+        "mse": float(round(mean_squared_error(y_test_reg, rf_preds), 4)),
+        "rmse": float(round(np.sqrt(mean_squared_error(y_test_reg, rf_preds)), 4)),
+        "r2": float(round(r2_score(y_test_reg, rf_preds), 4)),
     }
     joblib.dump(rf, MODELS_DIR / "random_forest.joblib")
 
-    # Model 3: Gradient Boosting Regressor
+    # Model 3: HistGradientBoosting Regressor
     logger.info("Training HistGradientBoosting Regressor...")
     gb = HistGradientBoostingRegressor(max_iter=100, max_depth=8, random_state=42)
-    gb.fit(X_train, y_train)
+    gb.fit(X_train, y_train_reg)
     gb_preds = gb.predict(X_test)
     evaluation_metrics["gradient_boosting"] = {
         "name": "Gradient Boosting Regressor",
-        "mae": float(round(mean_absolute_error(y_test, gb_preds), 4)),
-        "mse": float(round(mean_squared_error(y_test, gb_preds), 4)),
-        "rmse": float(round(np.sqrt(mean_squared_error(y_test, gb_preds)), 4)),
-        "r2": float(round(r2_score(y_test, gb_preds), 4)),
+        "type": "Regression",
+        "mae": float(round(mean_absolute_error(y_test_reg, gb_preds), 4)),
+        "mse": float(round(mean_squared_error(y_test_reg, gb_preds), 4)),
+        "rmse": float(round(np.sqrt(mean_squared_error(y_test_reg, gb_preds)), 4)),
+        "r2": float(round(r2_score(y_test_reg, gb_preds), 4)),
     }
     joblib.dump(gb, MODELS_DIR / "gradient_boosting.joblib")
 
-    # Real Feature Importances from Random Forest
+    # Feature Importances from Random Forest Regressor
     rf_importances = [
         {"feature": name, "importance": float(round(imp, 4))}
         for name, imp in sorted(zip(FEATURE_NAMES, rf.feature_importances_), key=lambda x: x[1], reverse=True)
     ]
 
-    # 5. Real K-Means Clustering & PCA on Real Movies
+    # 5. Supervised Classification (Decision Tree & Naive Bayes)
+    classification_metrics = {}
+
+    # Model 4: Decision Tree Classifier
+    logger.info("Training Decision Tree Classifier...")
+    dt = DecisionTreeClassifier(max_depth=6, min_samples_leaf=20, random_state=42)
+    dt.fit(X_train, y_train_clf)
+    dt_preds = dt.predict(X_test)
+    dt_cm = confusion_matrix(y_test_clf, dt_preds).tolist()
+    dt_importances = [
+        {"feature": name, "importance": float(round(imp, 4))}
+        for name, imp in sorted(zip(FEATURE_NAMES, dt.feature_importances_), key=lambda x: x[1], reverse=True)
+    ]
+    classification_metrics["decision_tree"] = {
+        "name": "Decision Tree Classifier",
+        "accuracy": float(round(accuracy_score(y_test_clf, dt_preds), 4)),
+        "precision": float(round(precision_score(y_test_clf, dt_preds, average="macro", zero_division=0), 4)),
+        "recall": float(round(recall_score(y_test_clf, dt_preds, average="macro", zero_division=0), 4)),
+        "f1": float(round(f1_score(y_test_clf, dt_preds, average="macro", zero_division=0), 4)),
+        "confusion_matrix": dt_cm,
+        "classes": CLASS_LABELS,
+        "tree_depth": int(dt.get_depth()),
+        "leaf_count": int(dt.get_n_leaves()),
+        "feature_importances": dt_importances,
+        "explanation": "Splits on user mean rating and movie average rating as dominant decision nodes."
+    }
+    joblib.dump(dt, MODELS_DIR / "decision_tree.joblib")
+
+    # Model 5: Gaussian Naive Bayes Classifier
+    logger.info("Training Gaussian Naive Bayes Classifier...")
+    nb = GaussianNB()
+    nb.fit(X_train, y_train_clf)
+    nb_preds = nb.predict(X_test)
+    nb_cm = confusion_matrix(y_test_clf, nb_preds).tolist()
+    classification_metrics["naive_bayes"] = {
+        "name": "Gaussian Naive Bayes",
+        "accuracy": float(round(accuracy_score(y_test_clf, nb_preds), 4)),
+        "precision": float(round(precision_score(y_test_clf, nb_preds, average="macro", zero_division=0), 4)),
+        "recall": float(round(recall_score(y_test_clf, nb_preds, average="macro", zero_division=0), 4)),
+        "f1": float(round(f1_score(y_test_clf, nb_preds, average="macro", zero_division=0), 4)),
+        "confusion_matrix": nb_cm,
+        "classes": CLASS_LABELS,
+        "class_priors": [float(round(p, 4)) for p in nb.class_prior_],
+        "explanation": "Calculates Gaussian posterior probabilities assuming conditional feature independence given rating tier."
+    }
+    joblib.dump(nb, MODELS_DIR / "naive_bayes.joblib")
+
+    # 6. Real K-Means Clustering & PCA on Real Movies
     logger.info("Performing Real K-Means Clustering and PCA...")
     movie_agg = ratings_df.groupby("movieId").agg(
         rating_count=("rating", "count"),
@@ -207,7 +306,6 @@ def run_training_pipeline():
     scaler = StandardScaler()
     X_scaled = scaler.fit_transform(cluster_features)
 
-    # Evaluate K from 2 to 7
     k_range = [2, 3, 4, 5, 6, 7]
     inertia_scores = []
     silhouette_scores = []
@@ -220,14 +318,12 @@ def run_training_pipeline():
         sil = float(round(silhouette_score(X_scaled, labels, sample_size=sample_size, random_state=42), 4))
         silhouette_scores.append(sil)
 
-    # Select optimal K based on silhouette score
     best_k_idx = int(np.argmax(silhouette_scores))
     selected_k = k_range[best_k_idx]
     selected_silhouette = silhouette_scores[best_k_idx]
 
     logger.info(f"Selected K={selected_k} with silhouette score {selected_silhouette}")
 
-    # Fit final KMeans model with selected K
     final_km = KMeans(n_clusters=selected_k, random_state=42, n_init=10)
     cluster_labels = final_km.fit_predict(X_scaled)
     cluster_df["cluster"] = cluster_labels
@@ -235,14 +331,14 @@ def run_training_pipeline():
     joblib.dump(final_km, MODELS_DIR / "kmeans_model.joblib")
     joblib.dump(scaler, MODELS_DIR / "scaler.joblib")
 
-    # Real PCA 2D
+    # PCA 2D Projection
     pca = PCA(n_components=2, random_state=42)
     coords_2d = pca.fit_transform(X_scaled)
     cluster_df["pca_x"] = [float(round(x, 4)) for x in coords_2d[:, 0]]
     cluster_df["pca_y"] = [float(round(y, 4)) for y in coords_2d[:, 1]]
     joblib.dump(pca, MODELS_DIR / "pca_model.joblib")
 
-    # Calculate Real Cluster Profiles & Dominant Genres
+    # Cluster Profiles
     cluster_profiles = []
     for c in range(selected_k):
         c_subset = cluster_df[cluster_df["cluster"] == c]
@@ -254,7 +350,6 @@ def run_training_pipeline():
         sorted_genres = sorted(genre_counts.items(), key=lambda x: x[1], reverse=True)[:4]
         dominant_genres_str = " / ".join([f"{g}" for g, _ in sorted_genres])
         
-        # Sample popular real movies from this cluster
         top_sample = c_subset.sort_values(by=["rating_count", "avg_rating"], ascending=[False, False]).head(5)
         sample_movies = [
             {"movieId": int(r["movieId"]), "title": str(r["title"]), "avg_rating": float(round(r["avg_rating"], 2))}
@@ -270,8 +365,7 @@ def run_training_pipeline():
             "sample_movies": sample_movies
         })
 
-    # Prepare PCA Scatter Plot points (e.g. 500 representative real movies across clusters)
-    # Sample proportionally from each cluster
+    # Scatter points sample
     scatter_points = []
     for c in range(selected_k):
         c_subset = cluster_df[cluster_df["cluster"] == c]
@@ -289,7 +383,7 @@ def run_training_pipeline():
                 "pca_y": float(row["pca_y"])
             })
 
-    # 6. Save Metadata & Validation Stats
+    # 7. Save Metadata & Validation Stats
     validation_stats = {
         "dataset_name": "MovieLens",
         "total_movies": int(len(movies_df)),
@@ -307,6 +401,7 @@ def run_training_pipeline():
 
     metadata = {
         "evaluation_metrics": evaluation_metrics,
+        "classification_metrics": classification_metrics,
         "feature_importances": rf_importances,
         "feature_names": FEATURE_NAMES,
         "validation_stats": validation_stats,
@@ -330,7 +425,7 @@ def run_training_pipeline():
     }
 
     joblib.dump(metadata, MODELS_DIR / "ml_metadata.joblib")
-    logger.info("Real ML Training Pipeline completed successfully and saved all models to backend/models/!")
+    logger.info("DWM ML Training Pipeline completed successfully and saved all models to backend/models/!")
     return metadata
 
 

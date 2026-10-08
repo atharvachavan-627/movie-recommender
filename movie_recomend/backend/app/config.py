@@ -17,6 +17,10 @@ else:
 MOVIES_CSV = DATA_DIR / "movies.csv"
 RATINGS_CSV = DATA_DIR / "ratings.csv"
 
+# Analytical Data Warehouse paths
+WAREHOUSE_DIR = BASE_DIR / "datawarehouse"
+WAREHOUSE_DB_PATH = WAREHOUSE_DIR / "moviemind_dw.db"
+
 # Recommendation Algorithm Weights (Configurable)
 # Hybrid Score = (CONTENT_WEIGHT * Content Score) + (COLLABORATIVE_WEIGHT * Collaborative Score)
 CONTENT_WEIGHT = 0.4

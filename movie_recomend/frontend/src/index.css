@@ -60,10 +60,107 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .skip:focus { left: 8px; }
 
 .app { min-height: 100vh; display: flex; flex-direction: column; }
-.app__main { flex: 1; }
-.container { width: 100%; max-width: 1180px; margin: 0 auto; padding: 0 24px; }
+.app__main { flex: 1; padding-bottom: 40px; }
+.container { width: 100%; max-width: 1440px; margin: 0 auto; padding: 0 20px; }
+.page { padding-top: 20px; }
+.page__head { margin-bottom: 20px; }
+.page__head h1 { font-size: clamp(1.6rem, 2.8vw, 2.2rem); font-weight: 800; margin-bottom: 4px; }
+.page__head p { font-size: 0.95rem; color: var(--ink-2); max-width: 900px; line-height: 1.45; }
 .muted { color: var(--ink-3); font-weight: 500; }
-.center { display: flex; justify-content: center; margin-top: 32px; }
+.center { display: flex; justify-content: center; margin-top: 24px; }
+
+/* ---- KPI & Metric Strips ---------------------------------------------- */
+.kpi-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.kpi-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  box-shadow: var(--sh-1);
+}
+.kpi-card__label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ink-3);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.kpi-card__value {
+  font-size: 1.45rem;
+  font-weight: 800;
+  color: var(--ink);
+  line-height: 1.15;
+}
+.kpi-card__sub {
+  font-size: 0.76rem;
+  color: var(--ink-2);
+}
+
+/* ---- Insight & Interpretation Callouts -------------------------------- */
+.insight-box {
+  background: var(--tint);
+  border-left: 3.5px solid var(--brand);
+  border-radius: 0 var(--r-sm) var(--r-sm) 0;
+  padding: 12px 16px;
+  margin-top: 14px;
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+.insight-box strong {
+  color: var(--ink);
+}
+.insight-box p {
+  margin: 4px 0 0 0;
+  color: var(--ink-2);
+}
+
+/* ---- Dense Data Tables ------------------------------------------------ */
+.table-wrapper {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  overflow-x: auto;
+  box-shadow: var(--sh-1);
+}
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  text-align: left;
+}
+.data-table th {
+  background: var(--tint);
+  color: var(--ink);
+  font-weight: 700;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+.data-table td {
+  padding: 9px 14px;
+  border-bottom: 1px solid var(--line-2);
+  color: var(--ink-2);
+}
+.data-table tr:last-child td {
+  border-bottom: none;
+}
+.data-table tr:hover td {
+  background: rgba(18, 20, 43, 0.02);
+}
 
 /* ---- tones ------------------------------------------------------------ */
 .tone-content { color: var(--content); } .tone-collab { color: var(--collab); } .tone-hybrid { color: var(--brand); }
@@ -455,6 +552,27 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .coldstart-item { background: #ffffff; border: 1px solid #ebd9b0; border-radius: var(--r-sm); padding: 12px; display: flex; flex-direction: column; justify-content: space-between; gap: 8px; }
 .coldstart-item .movie-name { font-weight: 700; font-size: 0.9rem; color: var(--ink); }
 .cluster-card { padding: 20px; border-radius: var(--r-md); background: var(--surface); border: 1px solid var(--line); display: flex; flex-direction: column; gap: 12px; }
-.cluster-card__head { display: flex; justify-content: space-between; align-items: center; }
 .cluster-tag { padding: 4px 10px; border-radius: 6px; font-weight: 700; font-size: 0.85rem; }
 
+/* Star Schema Topology */
+.schema-node {
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--line);
+  transition: all 0.15s ease-in-out;
+}
+
+.schema-node:hover {
+  border-color: var(--brand);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+}
+
+.schema-node.is-selected {
+  border-color: var(--brand) !important;
+  background: rgba(229, 9, 20, 0.08) !important;
+}
+
+.schema-node strong {
+  color: var(--text);
+}
