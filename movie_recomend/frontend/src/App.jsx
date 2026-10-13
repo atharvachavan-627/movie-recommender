@@ -130,8 +130,6 @@ export default function App() {
   // ==========================================================================
   const legacyRedirects = {
     "/warehouse": "/admin/warehouse",
-    "/olap": "/admin/olap",
-    "/ml-insights": "/admin/ml-insights",
     "/analytics": "/admin/analytics",
     "/viva": "/admin/technical-guide",
   };
@@ -152,25 +150,29 @@ export default function App() {
           <Route path="*" element={<Navigate to="/login" replace state={{ from: location }} />} />
         </Routes>
       ) : (
-        <>
+        <div className="user-shell">
           <a href="#main" className="skip">Skip to content</a>
           <Navbar status={status} user={user} onLogout={logout} />
-          <ScrollManager />
-          <main id="main" className="app__main">
-            <Routes>
-              <Route path="/" element={<ProtectedRoute><Home status={status} /></ProtectedRoute>} />
-              <Route path="/explore" element={<ProtectedRoute><Explore /></ProtectedRoute>} />
-              <Route path="/recommend" element={<ProtectedRoute><Recommendations /></ProtectedRoute>} />
-              <Route path="/recommend/:movieId" element={<ProtectedRoute><Recommendations /></ProtectedRoute>} />
-              <Route path="/recommendations" element={<ProtectedRoute><Recommendations /></ProtectedRoute>} />
-              <Route path="/recommendations/:movieId" element={<ProtectedRoute><Recommendations /></ProtectedRoute>} />
-              <Route path="/how-it-works" element={<ProtectedRoute><HowItWorks /></ProtectedRoute>} />
-              <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </main>
-          <Footer />
-        </>
+          <div className="user-main-wrap">
+            <ScrollManager />
+            <main id="main" className="app__main">
+              <Suspense fallback={<div className="container page"><div className="skeleton skeleton--hero" /></div>}>
+                <Routes>
+                  <Route path="/" element={<ProtectedRoute><Home status={status} /></ProtectedRoute>} />
+                  <Route path="/explore" element={<ProtectedRoute><Explore /></ProtectedRoute>} />
+                  <Route path="/recommend" element={<ProtectedRoute><Recommendations /></ProtectedRoute>} />
+                  <Route path="/recommend/:movieId" element={<ProtectedRoute><Recommendations /></ProtectedRoute>} />
+                  <Route path="/recommendations" element={<ProtectedRoute><Recommendations /></ProtectedRoute>} />
+                  <Route path="/recommendations/:movieId" element={<ProtectedRoute><Recommendations /></ProtectedRoute>} />
+                  <Route path="/how-it-works" element={<ProtectedRoute><HowItWorks /></ProtectedRoute>} />
+                  <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </Suspense>
+            </main>
+            <Footer />
+          </div>
+        </div>
       )}
     </div>
   );

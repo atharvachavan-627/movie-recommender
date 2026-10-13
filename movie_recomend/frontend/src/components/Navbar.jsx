@@ -1,93 +1,78 @@
 import { useEffect, useState } from "react";
 import { Link, NavLink } from "react-router-dom";
-import { LogOut, Menu, X, Sparkles, UserRound, ShieldCheck } from "lucide-react";
+import {
+  Activity,
+  Home,
+  LogOut,
+  Menu,
+  Search,
+  Sparkles,
+  UserRound,
+  X,
+} from "lucide-react";
 import Logo from "./Logo";
-import { useAdminAuth } from "../context/AdminAuthContext";
-
-const USER_LINKS = [
-  { to: "/", label: "Home", end: true },
-  { to: "/explore", label: "Explore" },
-  { to: "/recommend", label: "Get Recommendations" },
-  { to: "/how-it-works", label: "How It Works" },
-];
 
 const STATUS_LABEL = { online: "API online", offline: "API offline", checking: "Connecting" };
 
 export default function Navbar({ status, user, onLogout }) {
   const [open, setOpen] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
-  const { admin } = useAdminAuth();
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 4);
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
+    const closeOnRouteChange = () => setOpen(false);
+    window.addEventListener("popstate", closeOnRouteChange);
+    return () => window.removeEventListener("popstate", closeOnRouteChange);
   }, []);
 
   return (
-    <header className={`nav ${scrolled ? "is-scrolled" : ""}`}>
-      <div className="container nav__inner">
-        <Link to="/" className="nav__brand" aria-label="MovieMind home">
-          <Logo />
-        </Link>
-
-        <nav className={`nav__links ${open ? "is-open" : ""}`} aria-label="Primary">
-          {USER_LINKS.map((l) => (
-            <NavLink key={l.to} to={l.to} end={l.end} className="nav__link" onClick={() => setOpen(false)}>
-              {l.label}
-            </NavLink>
-          ))}
-          <NavLink to="/profile" className="nav__link nav__link-mobile-only" onClick={() => setOpen(false)}>
-            User Profile
-          </NavLink>
-          {admin && (
-            <Link to="/admin/dashboard" className="nav__link nav__link--admin-badge" onClick={() => setOpen(false)}>
-              <ShieldCheck size={16} /> Admin Console
-            </Link>
-          )}
-          <Link to="/recommend" className="btn btn--primary nav__cta-mobile" onClick={() => setOpen(false)}>
-            <Sparkles size={16} /> Get recommendations
+    <>
+      {open && <div className="user-sidebar-backdrop" onClick={() => setOpen(false)} aria-hidden="true" />}
+      <aside className={`user-sidebar ${open ? "is-open" : ""}`} aria-label="User navigation">
+        <div className="user-sidebar__header">
+          <Link to="/" className="user-sidebar__brand" onClick={() => setOpen(false)} aria-label="MovieMind home">
+            <Logo />
+            <span className="user-sidebar__subtitle">USER PLATFORM</span>
           </Link>
-        </nav>
-
-        <div className="nav__right">
-          <span className={`status status--${status}`} title="FastAPI backend status">
-            <span className="status__dot" />
-            <span className="status__label">{STATUS_LABEL[status]}</span>
-          </span>
-
-          {admin && (
-            <Link to="/admin/dashboard" className="btn btn--ghost nav__admin-btn" title="Open Administrator Control Center">
-              <ShieldCheck size={16} className="text-brand" />
-              <span>Admin Console</span>
-            </Link>
-          )}
-
-          <Link to="/recommend" className="btn btn--primary nav__cta">
-            <Sparkles size={16} /> Get recommendations
-          </Link>
-
-          <Link to="/profile" className="nav__profile" title={`View profile for ${user.name} (@${user.username})`}>
-            <UserRound size={16} />
-            <span>{user.name}</span>
-          </Link>
-
-          <button className="btn btn--ghost nav__logout" onClick={onLogout} aria-label="Log out">
-            <LogOut size={16} />
-            <span>Log out</span>
-          </button>
-
-          <button
-            className="nav__toggle"
-            onClick={() => setOpen((o) => !o)}
-            aria-label={open ? "Close menu" : "Open menu"}
-            aria-expanded={open}
-          >
-            {open ? <X size={22} /> : <Menu size={22} />}
+          <button className="user-sidebar__close" onClick={() => setOpen(false)} aria-label="Close navigation">
+            <X size={20} />
           </button>
         </div>
-      </div>
-    </header>
+
+        <nav className="user-sidebar__nav">
+          <div className="user-nav-group">
+            <span className="user-nav-group__label">DISCOVER</span>
+            <NavLink to="/" end className="user-nav-link" onClick={() => setOpen(false)}>
+              <Home size={18} /> <span>Home</span>
+            </NavLink>
+            <NavLink to="/explore" className="user-nav-link" onClick={() => setOpen(false)}>
+              <Search size={18} /> <span>Explore Movies</span>
+            </NavLink>
+            <NavLink to="/recommend" className="user-nav-link" onClick={() => setOpen(false)}>
+              <Sparkles size={18} /> <span>Recommendations</span>
+            </NavLink>
+            <NavLink to="/how-it-works" className="user-nav-link" onClick={() => setOpen(false)}>
+              <Activity size={18} /> <span>How It Works</span>
+            </NavLink>
+          </div>
+
+        </nav>
+
+        <div className="user-sidebar__footer">
+          <div className={`user-status status--${status}`} title="FastAPI backend status">
+            <span className="status__dot" />
+            <span>{STATUS_LABEL[status]}</span>
+          </div>
+          <Link to="/profile" className="user-sidebar__profile" onClick={() => setOpen(false)}>
+            <UserRound size={17} />
+            <span>Profile</span>
+          </Link>
+          <button className="user-sidebar__logout" onClick={onLogout}>
+            <LogOut size={17} /> <span>Log out</span>
+          </button>
+        </div>
+      </aside>
+      <button className="user-sidebar-toggle" onClick={() => setOpen(true)} aria-label="Open navigation">
+        <Menu size={22} />
+      </button>
+    </>
   );
 }

@@ -60,7 +60,6 @@ const PIPELINE_STAGES = [
     desc: "Multi-dimensional Roll-Up, Drill-Down, Slicing, Dicing, and 2D Pivot Cross-Tabulation.",
     input: "FACT_RATING + DIM_*",
     output: "Sub-cube aggregations",
-    link: "/olap"
   },
   {
     id: "mining",
@@ -70,7 +69,6 @@ const PIPELINE_STAGES = [
     desc: "9,666 frequent co-viewing rules (X → Y) and 23-feature user segmentation with PCA.",
     input: "Rating Transactions",
     output: "Association Rules & Clusters",
-    link: "/ml-insights"
   },
   {
     id: "ml",
@@ -80,7 +78,6 @@ const PIPELINE_STAGES = [
     desc: "Decision Tree (68.2% acc), Naive Bayes, Random Forest, and HistGradientBoosting regression.",
     input: "Feature Vectors (80/20 split)",
     output: "Trained Predictive Models",
-    link: "/ml-insights"
   },
   {
     id: "recommender",
@@ -277,9 +274,11 @@ export default function Home({ status }) {
                 <div style={{ fontSize: "0.82rem", background: "var(--bg)", padding: "8px 12px", borderRadius: "6px" }}>
                   <strong className="muted">OUTPUT:</strong> <code>{activeStage.output}</code>
                 </div>
-                <Link to={activeStage.link} className="btn btn--secondary" style={{ alignSelf: "flex-start", marginTop: "4px", fontSize: "0.85rem" }}>
-                  Explore {activeStage.title} Live <ArrowRight size={14} />
-                </Link>
+                {activeStage.link && (
+                  <Link to={activeStage.link} className="btn btn--secondary" style={{ alignSelf: "flex-start", marginTop: "4px", fontSize: "0.85rem" }}>
+                    Explore {activeStage.title} Live <ArrowRight size={14} />
+                  </Link>
+                )}
               </div>
             </div>
           )}
@@ -316,9 +315,6 @@ export default function Home({ status }) {
               <p style={{ fontSize: "0.85rem", color: "var(--text-muted)", margin: 0 }}>
                 Interactive Roll-Up, Drill-Down along 5-level time hierarchy, Slicing, Dicing, and 2D cross-tabulation matrix.
               </p>
-              <Link to="/olap" className="link-arrow" style={{ marginTop: "1rem", fontSize: "0.82rem" }}>
-                Launch OLAP <ArrowRight size={14} />
-              </Link>
             </article>
 
             <article className="card feature" style={{ padding: "1.5rem" }}>
@@ -329,9 +325,6 @@ export default function Home({ status }) {
               <p style={{ fontSize: "0.85rem", color: "var(--text-muted)", margin: 0 }}>
                 Decision Tree, Naive Bayes, Random Forest regression, K-Means elbow/silhouette analysis, and 9,666 Apriori rules.
               </p>
-              <Link to="/ml-insights" className="link-arrow" style={{ marginTop: "1rem", fontSize: "0.82rem" }}>
-                Explore ML Insights <ArrowRight size={14} />
-              </Link>
             </article>
 
             <article className="card feature" style={{ padding: "1.5rem" }}>
