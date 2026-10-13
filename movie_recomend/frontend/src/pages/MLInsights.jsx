@@ -296,17 +296,17 @@ export default function MLInsights() {
 
   return (
     <div className="container page">
-      {/* ML Lab Header */}
+      {/* ML Header */}
       <header className="page__head" style={{ marginBottom: "1.25rem" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "16px" }}>
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "0.25rem" }}>
               <span className="badge badge--brand" style={{ fontSize: "0.72rem" }}>
-                Scientific ML Laboratory
+                Scientific ML
               </span>
               <span className="muted" style={{ fontSize: "0.78rem" }}>Scikit-Learn · Chronological 80/20 Train/Test Split</span>
             </div>
-            <h1 style={{ margin: "0.15rem 0 0.35rem", fontSize: "1.65rem" }}>Machine Learning & Data Mining Lab</h1>
+            <h1 style={{ margin: "0.15rem 0 0.35rem", fontSize: "1.65rem" }}>Machine Learning & Data Mining</h1>
             <p style={{ margin: 0, fontSize: "0.88rem", color: "var(--text-muted)" }}>
               Evaluate predictive algorithms, benchmark recommendation models, and inspect multidimensional feature spaces.
             </p>
@@ -314,7 +314,7 @@ export default function MLInsights() {
         </div>
       </header>
 
-      {/* Top Laboratory KPI Strip */}
+      {/* Top KPI Strip */}
       <div className="kpi-strip" style={{ marginBottom: "1.5rem" }}>
         <div className="kpi-card">
           <span className="kpi-card__label"><GitBranch size={13} /> Best Classification Accuracy</span>
@@ -349,7 +349,7 @@ export default function MLInsights() {
       {/* Section Sub-Navigation */}
       <div className="chips" style={{ marginBottom: "1.5rem" }}>
         {[
-          { id: "all", label: "Full Laboratory View" },
+          { id: "all", label: "Full Overview" },
           { id: "predict", label: "Interactive Predictor & Cold-Start" },
           { id: "classification", label: "Supervised Classification" },
           { id: "regression", label: "Supervised Regression" },

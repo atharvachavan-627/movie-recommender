@@ -157,7 +157,7 @@ export default function Analytics() {
       setExplorerData(exp || null);
       setDataQuality(dq);
     } catch (e) {
-      console.error("Failed to load analytics lab data:", e);
+      console.error("Failed to load analytics data:", e);
       setError(true);
     } finally {
       setLoading(false);
@@ -249,10 +249,10 @@ export default function Analytics() {
           <div>
             <div style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "0.78rem", fontWeight: "700", textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--color-primary)", background: "rgba(79, 70, 229, 0.08)", padding: "3px 10px", borderRadius: "100px", marginBottom: "0.4rem" }}>
               <Sparkles size={13} />
-              MovieMind Analytics Lab
+              MovieMind Analytics
             </div>
             <h1 style={{ margin: "0 0 0.4rem", fontSize: "1.85rem", fontWeight: "800", letterSpacing: "-0.02em" }}>
-              Enterprise Data Intelligence & Distribution Lab
+              Enterprise Data Intelligence & Distribution
             </h1>
             <p style={{ margin: 0, color: "var(--color-text-muted)", fontSize: "0.95rem", maxWidth: "780px" }}>
               Explore the MovieLens dataset through interactive statistical distributions, multi-dimensional OLAP trends, popularity matrices, and physical Star Schema data quality verification.

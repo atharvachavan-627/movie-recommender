@@ -139,7 +139,10 @@ export default function WarehouseETL() {
     }
   }, [selectedTable]);
 
-  const handleRebuildETL = async () => {
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+
+  const confirmAndExecuteRebuild = async () => {
+    setShowConfirmModal(false);
     if (rebuilding) return;
     setRebuilding(true);
     setRebuildStatus(null);
@@ -165,6 +168,52 @@ export default function WarehouseETL() {
 
   return (
     <div className="container page">
+      {/* Confirmation Modal */}
+      {showConfirmModal && (
+        <div className="admin-modal-backdrop" role="dialog" aria-modal="true">
+          <div className="admin-modal-card">
+            <div className="admin-modal-header">
+              <span className="settings-icon-pill bg-brand"><RotateCw size={18} /></span>
+              <h3>Confirm Star Schema Rebuild</h3>
+            </div>
+            <div className="admin-modal-body">
+              <p>
+                Are you sure you want to trigger a full ETL pipeline rebuild?
+              </p>
+              <ul style={{ margin: "10px 0 14px 20px", fontSize: "0.88rem", color: "var(--ink-2)", lineHeight: 1.6 }}>
+                <li>Extract and validate all 42,986 raw ratings and 62,423 movies.</li>
+                <li>Derive surrogate integer keys across DIM_MOVIE, DIM_USER, DIM_DATE, and DIM_GENRE.</li>
+                <li>Repopulate 42,769 atomic fact rows in FACT_RATING inside <code>moviemind_dw.db</code>.</li>
+                <li>Execute automated referential integrity and orphan-key audit.</li>
+              </ul>
+              <div className="admin-modal-warning">
+                <AlertTriangle size={16} />
+                <span>This privileged action requires active administrator authorization.</span>
+              </div>
+            </div>
+            <div className="admin-modal-actions">
+              <button
+                type="button"
+                className="btn btn--secondary"
+                onClick={() => setShowConfirmModal(false)}
+                disabled={rebuilding}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn btn--primary"
+                onClick={confirmAndExecuteRebuild}
+                disabled={rebuilding}
+              >
+                <RotateCw size={15} />
+                <span>Confirm & Execute Rebuild</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <header className="page__head" style={{ marginBottom: "1.25rem" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "1rem" }}>
@@ -182,12 +231,12 @@ export default function WarehouseETL() {
           </div>
           <button 
             className="btn btn--primary" 
-            onClick={handleRebuildETL} 
+            onClick={() => setShowConfirmModal(true)} 
             disabled={rebuilding}
             style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "0.85rem" }}
           >
             <RotateCw size={14} className={rebuilding ? "spin" : ""} />
-            {rebuilding ? "Rebuilding Warehouse..." : "Rebuild ETL Pipeline"}
+            {rebuilding ? "Executing ETL Pipeline..." : "Rebuild ETL Pipeline"}
           </button>
         </div>
       </header>
@@ -209,6 +258,7 @@ export default function WarehouseETL() {
           <span>{rebuildStatus.message}</span>
         </div>
       )}
+
 
       {/* Fact Table Grain & Overview KPI Strip */}
       <div className="kpi-strip" style={{ marginBottom: "1.5rem" }}>
@@ -591,7 +641,7 @@ export default function WarehouseETL() {
       )}
 
       {/* ETL Pipeline Architecture & Traceability */}
-      <section className="card panel" style={{ padding: "1.5rem", marginBottom: "1.5rem" }}>
+      <section id="etl" className="card panel" style={{ padding: "1.5rem", marginBottom: "1.5rem" }}>
         <div style={{ marginBottom: "1.25rem" }}>
           <h2 style={{ fontSize: "1.15rem", display: "flex", alignItems: "center", gap: "8px", margin: "0 0 4px" }}>
             <Cpu size={18} color="var(--brand)" /> End-to-End ETL Traceability & Record Reconcilliation
@@ -642,7 +692,7 @@ export default function WarehouseETL() {
       </section>
 
       {/* Data Quality & Warehouse Health */}
-      <section className="card panel" style={{ padding: "1.5rem" }}>
+      <section id="quality" className="card panel" style={{ padding: "1.5rem" }}>
         <div style={{ marginBottom: "1.25rem" }}>
           <h2 style={{ fontSize: "1.15rem", display: "flex", alignItems: "center", gap: "8px", margin: "0 0 4px" }}>
             <ShieldCheck size={18} color="var(--brand)" /> Empirical Data Quality Audit

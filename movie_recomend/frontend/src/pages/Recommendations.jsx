@@ -1,14 +1,17 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Cpu, Info, RefreshCw, Star, SlidersHorizontal } from "lucide-react";
+import { ArrowLeft, Cpu, Info, RefreshCw, Star, SlidersHorizontal, Sparkles } from "lucide-react";
 import SearchBox from "../components/SearchBox";
 import ScoreBar from "../components/ScoreBar";
+import StarRating from "../components/StarRating";
+import { useAuth } from "../context/AuthContext";
 import {
   fetchMovieDetails,
   fetchPopularMovies,
   fetchHybridRecommendations,
   fetchContentRecommendations,
   fetchCollaborativeRecommendations,
+  fetchPersonalizedRecommendations,
 } from "../services/api";
 import { genresOf, posterStyle, initials, cleanTitle } from "../utils/movies";
 
@@ -19,17 +22,94 @@ const MODES = [
 ];
 
 function Picker({ onSelect }) {
+  const { user } = useAuth();
   const [popular, setPopular] = useState([]);
-  useEffect(() => { fetchPopularMovies(6).then(setPopular).catch(() => {}); }, []);
+  const [personalized, setPersonalized] = useState([]);
+  const [loadingPersonalized, setLoadingPersonalized] = useState(false);
+
+  useEffect(() => {
+    fetchPopularMovies(6).then(setPopular).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (!user) return;
+    setLoadingPersonalized(true);
+    fetchPersonalizedRecommendations(6)
+      .then((res) => setPersonalized(res.recommendations || []))
+      .catch(() => {})
+      .finally(() => setLoadingPersonalized(false));
+  }, [user]);
+
   return (
     <div className="container page picker">
       <header className="page__head page__head--center">
         <h1>Get movie recommendations</h1>
-        <p>Search for a movie you like and MovieMind will suggest similar ones.</p>
+        <p>Search for a movie you like and MovieMind will suggest similar ones, or explore personalized recommendations.</p>
       </header>
       <SearchBox size="lg" autoFocus onSelect={onSelect} />
+
+      {/* Personalized Recommendations for Logged In User */}
+      {user && personalized.length > 0 && (
+        <div style={{ marginTop: "32px", textAlign: "left" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px" }}>
+            <div>
+              <div style={{ display: "inline-flex", alignItems: "center", gap: "5px", color: "var(--brand)", fontSize: "0.8rem", fontWeight: 700, textTransform: "uppercase" }}>
+                <Sparkles size={14} /> Recommended For You
+              </div>
+              <h2 style={{ fontSize: "1.25rem", margin: "2px 0 0" }}>Personalized for @{user.username}</h2>
+            </div>
+            <Link to="/profile" className="btn btn--ghost btn--sm">
+              View Rating Profile
+            </Link>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "12px" }}>
+            {personalized.map((m) => {
+              const ps = posterStyle(m.title);
+              return (
+                <div
+                  key={m.movieId}
+                  className="card"
+                  onClick={() => onSelect(m)}
+                  style={{
+                    padding: "14px",
+                    cursor: "pointer",
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "space-between",
+                    transition: "transform 0.15s ease",
+                  }}
+                >
+                  <div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
+                      <div style={{ width: "32px", height: "32px", borderRadius: "6px", background: ps.background, color: ps.color, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: "0.8rem" }}>
+                        {initials(m.title)}
+                      </div>
+                      <span className="rating" style={{ fontSize: "0.78rem" }}>
+                        <Star size={12} fill="currentColor" /> {m.predicted_rating ? m.predicted_rating.toFixed(1) : (m.avg_rating ? m.avg_rating.toFixed(1) : "3.5")}
+                      </span>
+                    </div>
+                    <strong style={{ fontSize: "0.88rem", display: "block", color: "var(--ink)", lineHeight: 1.25, marginBottom: "4px" }}>
+                      {cleanTitle(m.title)}
+                    </strong>
+                    <span className="muted" style={{ fontSize: "0.75rem", display: "block" }}>
+                      {genresOf(m).slice(0, 2).join(", ")}
+                    </span>
+                  </div>
+                  {m.explanation && (
+                    <p style={{ margin: "8px 0 0", fontSize: "0.72rem", color: "var(--ink-3)", lineHeight: 1.3 }}>
+                      {m.explanation}
+                    </p>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {popular.length > 0 && (
-        <div className="picker__suggest">
+        <div className="picker__suggest" style={{ marginTop: "28px" }}>
           <span className="muted">Or start from a popular title</span>
           <div className="chips chips--center">
             {popular.map((m) => (
@@ -131,6 +211,9 @@ export default function Recommendations() {
               <span className="muted">{(movie.rating_count || 0).toLocaleString()} ratings</span>
             </div>
             <div className="chips">{genres.map((g) => <span key={g} className="chip">{g}</span>)}</div>
+            <div style={{ marginTop: "14px", borderTop: "1px solid var(--line)", paddingTop: "12px" }}>
+              <StarRating movieId={movie.movieId} movieTitle={movie.title} showTitle={true} />
+            </div>
           </div>
         </div>
 

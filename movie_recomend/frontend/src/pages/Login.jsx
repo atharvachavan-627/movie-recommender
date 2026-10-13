@@ -29,6 +29,11 @@ export default function Login() {
       return;
     }
     setLoading(true);
+    if (form.identifier.trim().toLowerCase() === "moviemind_admin") {
+      setLoading(false);
+      setError("moviemind_admin is a system administrator account. Please sign in at the Admin Portal.");
+      return;
+    }
     try {
       await login(form, remember);
       navigate(from, { replace: true });
@@ -59,7 +64,18 @@ export default function Login() {
             <p>Pick up where your movie search left off.</p>
           </div>
           <form className="auth-form" onSubmit={submit} noValidate>
-            {error && <div className="form-alert form-alert--error" role="alert">{error}</div>}
+            {error && (
+              <div className="form-alert form-alert--error" role="alert">
+                {error}
+                {error.includes("Admin Portal") && (
+                  <div style={{ marginTop: "6px" }}>
+                    <Link to="/admin/login" className="btn btn--primary btn--sm" style={{ display: "inline-flex", alignItems: "center", gap: "6px", marginTop: "4px" }}>
+                      <ShieldCheck size={14} /> Open Admin Login
+                    </Link>
+                  </div>
+                )}
+              </div>
+            )}
             {notice && <div className="form-alert form-alert--info" role="status">{notice}</div>}
             <label htmlFor="identifier">Email or username</label>
             <div className="auth-input"><Mail size={18} aria-hidden="true" /><input id="identifier" name="identifier" value={form.identifier} onChange={update} autoComplete="username" placeholder="you@example.com" /></div>
@@ -69,6 +85,11 @@ export default function Login() {
             <button className="btn btn--primary btn--block btn--lg" type="submit" disabled={loading}>{loading ? "Signing in..." : <><LogIn size={18} /> Sign in</>}</button>
           </form>
           <p className="auth__switch">Don't have an account? <Link to="/register">Create one</Link></p>
+          <div style={{ marginTop: "16px", paddingTop: "14px", borderTop: "1px solid var(--line)", textAlign: "center" }}>
+            <Link to="/admin/login" style={{ fontSize: "0.85rem", color: "var(--brand)", fontWeight: 700, display: "inline-flex", alignItems: "center", gap: "6px", textDecoration: "none" }}>
+              <ShieldCheck size={16} /> Sign in to Admin Portal →
+            </Link>
+          </div>
         </div>
       </section>
     </main>

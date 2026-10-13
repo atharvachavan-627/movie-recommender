@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import SearchBox from "../components/SearchBox";
 import MovieCard from "../components/MovieCard";
-import { fetchAnalyticsOverview, fetchPopularMovies, fetchWarehouseSummary } from "../services/api";
+import { fetchPopularMovies, fetchWarehouseSummary } from "../services/api";
 
 const PIPELINE_STAGES = [
   {
@@ -96,14 +96,15 @@ const PIPELINE_STAGES = [
 
 export default function Home({ status }) {
   const navigate = useNavigate();
-  const [overview, setOverview] = useState(null);
   const [warehouse, setWarehouse] = useState(null);
   const [popular, setPopular] = useState([]);
   const [activeStage, setActiveStage] = useState(PIPELINE_STAGES[2]);
 
   useEffect(() => {
-    fetchAnalyticsOverview().then(setOverview).catch(() => {});
-    fetchWarehouseSummary().then(setWarehouse).catch(() => {});
+    const adminToken = window.sessionStorage.getItem("moviemind_admin_token");
+    if (adminToken) {
+      fetchWarehouseSummary().then(setWarehouse).catch(() => {});
+    }
     fetchPopularMovies(4).then((p) => setPopular((p || []).slice(0, 4))).catch(() => {});
   }, [status]);
 
@@ -329,7 +330,7 @@ export default function Home({ status }) {
                 Decision Tree, Naive Bayes, Random Forest regression, K-Means elbow/silhouette analysis, and 9,666 Apriori rules.
               </p>
               <Link to="/ml-insights" className="link-arrow" style={{ marginTop: "1rem", fontSize: "0.82rem" }}>
-                Explore ML Lab <ArrowRight size={14} />
+                Explore ML Insights <ArrowRight size={14} />
               </Link>
             </article>
 

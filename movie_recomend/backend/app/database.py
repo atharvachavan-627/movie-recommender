@@ -49,9 +49,26 @@ def initialize_database() -> None:
                 movie_id INTEGER NOT NULL,
                 rating REAL NOT NULL,
                 created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
                 UNIQUE(user_id, movie_id),
                 FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
             )
+            """
+        )
+        # Migrate updated_at column if database was created prior
+        try:
+            connection.execute("ALTER TABLE user_ratings ADD COLUMN updated_at TEXT")
+        except sqlite3.OperationalError:
+            pass
+
+        connection.execute(
+            """
+            CREATE INDEX IF NOT EXISTS idx_user_ratings_user_id ON user_ratings(user_id)
+            """
+        )
+        connection.execute(
+            """
+            CREATE INDEX IF NOT EXISTS idx_user_ratings_user_movie ON user_ratings(user_id, movie_id)
             """
         )
         connection.execute(

@@ -44,3 +44,12 @@ FRONTEND_ORIGINS = [
 def get_jwt_secret() -> str:
     return os.getenv("MOVIEMIND_JWT_SECRET", "moviemind_jwt_secret_key_dwm_project_2026")
 
+
+# Administrator Authentication & Session Configuration
+ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "moviemind_admin")
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "MovieMindDemo2026!")
+ADMIN_PASSWORD_HASH = os.getenv("ADMIN_PASSWORD_HASH", "")
+ADMIN_SESSION_EXPIRE_MINUTES = int(os.getenv("ADMIN_SESSION_EXPIRE_MINUTES", "120"))
+ADMIN_COOKIE_NAME = "moviemind_admin_session"
+
+

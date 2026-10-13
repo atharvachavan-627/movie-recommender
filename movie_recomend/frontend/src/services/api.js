@@ -1,7 +1,13 @@
 const API_BASE_URL = "http://127.0.0.1:8000/api";
 
 function getToken() {
-  return window.localStorage.getItem("moviemind_token") || window.sessionStorage.getItem("moviemind_session_token");
+  if (typeof window !== "undefined" && window.location.pathname.startsWith("/admin")) {
+    const adminToken = window.sessionStorage.getItem("moviemind_admin_token");
+    if (adminToken) return adminToken;
+  }
+  const userToken = window.localStorage.getItem("moviemind_token") || window.sessionStorage.getItem("moviemind_session_token");
+  if (userToken) return userToken;
+  return window.sessionStorage.getItem("moviemind_admin_token");
 }
 
 async function request(url, options = {}, requiresAuth = true) {
@@ -9,8 +15,16 @@ async function request(url, options = {}, requiresAuth = true) {
   headers.set("Content-Type", "application/json");
   const token = getToken();
   if (requiresAuth && token) headers.set("Authorization", `Bearer ${token}`);
-  const res = await fetch(url, { ...options, headers });
-  if (res.status === 401 && requiresAuth) window.dispatchEvent(new Event("moviemind:unauthorized"));
+  const adminToken = window.sessionStorage.getItem("moviemind_admin_token");
+  if (adminToken) headers.set("X-Admin-Token", adminToken);
+  const res = await fetch(url, { ...options, headers, credentials: "include" });
+  if (res.status === 401 && requiresAuth) {
+    if (typeof window !== "undefined" && window.location.pathname.startsWith("/admin")) {
+      window.dispatchEvent(new Event("moviemind:admin-unauthorized"));
+    } else {
+      window.dispatchEvent(new Event("moviemind:unauthorized"));
+    }
+  }
   if (!res.ok) {
     let detail = "Request failed. Please try again.";
     try { detail = (await res.json()).detail || detail; } catch { /* non-JSON error */ }
@@ -18,6 +32,7 @@ async function request(url, options = {}, requiresAuth = true) {
   }
   return res.json();
 }
+
 
 // --- Auth Endpoints ---
 
@@ -90,7 +105,7 @@ export async function fetchExecutiveInsights() {
 }
 
 export async function fetchPopularMovies(limit = 10) {
-  return request(`${API_BASE_URL}/analytics/popular?limit=${limit}`);
+  return request(`${API_BASE_URL}/movies/popular?limit=${limit}`);
 }
 
 export async function fetchGenreAnalytics(minRatings = 0) {
@@ -226,10 +241,46 @@ export async function linkMovieLensUser(movielens_user_id) {
 }
 
 export async function rateMovie(movie_id, rating) {
-  return request(`${API_BASE_URL}/ml/rate-movie`, {
+  return request(`${API_BASE_URL}/ratings`, {
     method: "POST",
     body: JSON.stringify({ movie_id, rating })
   });
+}
+
+export async function fetchUserRatings({ sortBy = "recent", limit = 50, offset = 0 } = {}) {
+  return request(`${API_BASE_URL}/ratings/user?sort_by=${encodeURIComponent(sortBy)}&limit=${limit}&offset=${offset}`);
+}
+
+export async function fetchMovieUserRating(movieId) {
+  return request(`${API_BASE_URL}/ratings/movie/${movieId}`);
+}
+
+export async function submitRating(movieId, rating) {
+  return request(`${API_BASE_URL}/ratings`, {
+    method: "POST",
+    body: JSON.stringify({ movie_id: movieId, rating })
+  });
+}
+
+export async function updateRating(movieId, rating) {
+  return request(`${API_BASE_URL}/ratings/movie/${movieId}`, {
+    method: "PUT",
+    body: JSON.stringify({ rating })
+  });
+}
+
+export async function deleteRating(movieId) {
+  return request(`${API_BASE_URL}/ratings/movie/${movieId}`, {
+    method: "DELETE"
+  });
+}
+
+export async function fetchProfileStats() {
+  return request(`${API_BASE_URL}/ratings/profile-stats`);
+}
+
+export async function fetchPersonalizedRecommendations(limit = 10) {
+  return request(`${API_BASE_URL}/recommendations/personalized?limit=${limit}`);
 }
 
 export async function predictRating(movie_id, model = "random_forest", movielens_user_id = null) {
